@@ -60,7 +60,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
 	"--gafferVersion",
-	default = "0.58.2.0",
+	default = "0.59.4.0",
 	help = "The version of Gaffer to build against. "
 )
 
@@ -72,6 +72,13 @@ parser.add_argument(
 parser.add_argument(
 	"--cyclesVersion",
 	help = "The version to build. Can either be a tag or SHA1 commit hash."
+)
+
+parser.add_argument(
+	"--pythonVariant",
+	default = "2",
+	choices = [ "2", "3" ],
+	help = "The version of Python to build for."
 )
 
 parser.add_argument(
@@ -189,6 +196,7 @@ formatVariables = {
 	"platform" : args.platform,
 	"gafferVersion" : args.gafferVersion,
 	"cyclesVersion" : args.cyclesVersion,
+	"pythonVariant" : args.pythonVariant,
 	"releaseToken" : os.environ["GITHUB_RELEASE_TOKEN"],
 	"auth" : '-H "Authorization: token {}"'.format( os.environ["GITHUB_RELEASE_TOKEN"] ),
 	"buildType" : buildType,
@@ -204,7 +212,7 @@ exp = ""
 if formatVariables["experimental"] :
 	exp = "-experimental"
 
-packageName = "gafferCycles-{version}{exp}-gaffer-{gafferVersion}-{platform}".format( exp=exp, **formatVariables )
+packageName = "gafferCycles-{version}{exp}-gaffer-{gafferVersion}-{platform}-python{pythonVariant}".format( exp=exp, **formatVariables )
 formatVariables["uploadFile"] = "%s.tar.gz" % packageName
 
 # If we're going to be doing an upload, then check that the release exists. Better
@@ -240,7 +248,7 @@ if args.docker and not os.path.exists( "/.dockerenv" ) :
 	if args.interactive :
 		containerBashCommand = "{env} {termCmd}".format( env = containerEnv, termCmd = termCmd )
 	else :
-		containerBashCommand = "{env} {pyCmd} --gafferVersion {gafferVersion} --cyclesVersion {cyclesVersion} --version {version} --upload {upload} --platform {platform} --optix {optix} --experimental {experimental} --output=./out".format( pyCmd = pyCmd, env = containerEnv, **formatVariables )
+		containerBashCommand = "{env} {pyCmd} --gafferVersion {gafferVersion} --cyclesVersion {cyclesVersion} --pythonVariant {pythonVariant} --version {version} --upload {upload} --platform {platform} --optix {optix} --experimental {experimental} --output=./out".format( pyCmd = pyCmd, env = containerEnv, **formatVariables )
 
 	containerCommand = "docker run --name {name} -i -t gaffercycles-build -c '{command}'".format(
 		name = containerName,
@@ -269,13 +277,13 @@ if not os.path.isdir( formatVariables["output"] ) :
 
 # Download Gaffer
 
-gafferURL = "https://github.com/GafferHQ/gaffer/releases/download/{gafferVersion}/gaffer-{gafferVersion}-{platform}.tar.gz".format( **formatVariables )
+gafferURL = "https://github.com/GafferHQ/gaffer/releases/download/{gafferVersion}/gaffer-{gafferVersion}-{platform}-python{pythonVariant}.tar.gz".format( **formatVariables )
 if platform == "windows" :
-	gafferURL = "https://github.com/hypothetical-inc/gaffer/releases/download/{gafferVersion}-beta/gaffer-{gafferVersion}-{platform}.zip".format( **formatVariables )
+	gafferURL = "https://github.com/hypothetical-inc/gaffer/releases/download/{gafferVersion}-beta/gaffer-{gafferVersion}-{platform}-python{pythonVariant}.zip".format( **formatVariables )
 
 sys.stderr.write( "Downloading gaffer \"%s\"\n" % gafferURL )
 
-gafferDirName = "gaffer-{gafferVersion}".format( **formatVariables )
+gafferDirName = "gaffer-{gafferVersion}-{platform}-python{pythonVariant}".format( **formatVariables )
 tarFileName = "{0}.tar.gz".format( gafferDirName )
 downloadCommand = "curl -L {0} > {1}".format( gafferURL, tarFileName )
 sys.stderr.write( downloadCommand + "\n" )
@@ -376,7 +384,7 @@ commands = [
 		" -D WITH_OPENIMAGEDENOISE=ON"
 		" ../..".format( gafferCyclesRoot=gafferCyclesDirName, gafferRoot=gafferDirName, withOptix=withOptix, withExperimental=str( int( formatVariables["experimental"] ) ), **formatVariables ),
 
-	"cd build/{platform}_{buildType} && cmake --build . --config {buildType} --target install -- -j {jobs}".format( jobs=multiprocessing.cpu_count(), **formatVariables ),
+	"cd build/{platform}_{buildType} && cmake --build . --config {buildType} --target install -- -j {jobs} --trace VERBOSE=1".format( jobs=multiprocessing.cpu_count(), **formatVariables ),
 	"mv install/{platform}_{buildType}/lib/cmake /tmp/cmake && "
 	"if [ -d \"install/{platform}_{buildType}/lib64\" ]; then mv install/{platform}_{buildType}/lib64/* install/{platform}_{buildType}/lib; fi && "
 	"mv /tmp/cmake/* install/{platform}_{buildType}/lib/cmake".format( **formatVariables ),
@@ -391,13 +399,15 @@ commands = [
 	"tar -c -z -f {output}/{uploadFile} {packageName}".format( 
 		manifest=manifest, packageName=packageName, gafferCyclesRoot=gafferCyclesDirName, **formatVariables ),
 ]
-
 env = os.environ.copy()
 env["LD_LIBRARY_PATH"] = gafferDirName + os.sep + "lib" + os.pathsep + env.get( "LD_LIBRARY_PATH", "" )
 
 for command in depCommands :
 	sys.stderr.write( command + "\n" )
-	subprocess.check_call( command, shell = True )
+	if (formatVariables["pythonVariant"] == "3"):
+		subprocess.check_call( command, shell = True, env = env )
+	else:
+		subprocess.check_call( command, shell = True)
 
 for command in commands :
 	sys.stderr.write( command + "\n" )
@@ -405,13 +415,13 @@ for command in commands :
 
 # Upload the build
 
-if args.upload :
+""" if args.upload :
 
 	uploadCommand = (
 		'curl {auth}'
 		' -H "Content-Type: application/zip"'
 		' --data-binary @{uploadFile} "{uploadURL}"'
-		' -o /tmp/curlResult.txt' # Must specify output file in order to get progress output
+		' -o /tmp/curlResult.txt' # Must specify output file in order to get progress output !!!
 	).format(
 		uploadURL = "https://uploads.github.com/repos/boberfly/gaffercycles/releases/{id}/assets?name={uploadName}".format(
 			id = releaseId(),
@@ -424,4 +434,4 @@ if args.upload :
 	sys.stderr.write( "Uploading package\n" )
 	sys.stderr.write( uploadCommand + "\n" )
 
-	subprocess.check_call( uploadCommand, shell = True )
+	subprocess.check_call( uploadCommand, shell = True ) """

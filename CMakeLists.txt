@@ -265,7 +265,8 @@ target_link_libraries(GafferCyclesModule
     )
 target_include_directories(GafferCyclesModule PRIVATE 
     include ${GAFFER_ROOT}/include 
-    ${GAFFER_ROOT}/include/python2.7 
+    #${GAFFER_ROOT}/include/python2.7 # /todo choose python here based on -PythonVariant arg
+    ${GAFFER_ROOT}/include/python3.7m
     ${CYCLES_INCLUDE_DIR}
     ${EMBREE_INCLUDE_DIRS}
     )
