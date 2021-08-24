@@ -60,7 +60,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
 	"--gafferVersion",
-	default = "0.59.6.0",
+	default = "0.60.4.0",
 	help = "The version of Gaffer to build against. "
 )
 
@@ -298,7 +298,8 @@ gafferDirName = os.path.abspath( gafferDirName )
 
 # Download GafferCycles
 
-gafferCyclesURL = "https://github.com/boberfly/GafferCycles/archive/{version}.tar.gz".format( **formatVariables )
+#gafferCyclesURL = "https://github.com/boberfly/GafferCycles/archive/{version}.tar.gz".format( **formatVariables )
+gafferCyclesURL = "https://github.com/kubo-von/GafferCycles/archive/refs/tags/{version}.tar.gz".format( **formatVariables )
 sys.stderr.write( "Downloading GafferCycles \"%s\"\n" % gafferCyclesURL )
 
 gafferCyclesDirName = "gaffercycles-{version}-source".format( **formatVariables )
@@ -315,8 +316,8 @@ subprocess.check_call( "tar xf %s -C %s --strip-components=1" % ( tarFileName, g
 os.chdir( gafferCyclesDirName )
 
 # Download Cycles stand-alone
-
-cyclesURL = "https://github.com/boberfly/cycles/archive/{cyclesVersion}.tar.gz".format( **formatVariables )
+cyclesURL = "https://github.com/kubo-von/cycles/archive/refs/tags/{cyclesVersion}.tar.gz".format( **formatVariables )
+#cyclesURL = "https://github.com/boberfly/cycles/archive/{cyclesVersion}.tar.gz".format( **formatVariables )
 sys.stderr.write( "Downloading Cycles \"%s\"\n" % cyclesURL )
 
 cyclesDirName = "cycles"

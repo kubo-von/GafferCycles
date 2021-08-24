@@ -2,4 +2,4 @@
 *
 # And then explicitly include just what we want
 !build.py
-!NVIDIA-OptiX-SDK-*-linux64.sh
+!NVIDIA-OptiX-SDK-*.sh

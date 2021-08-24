@@ -86,6 +86,13 @@ find_package(OpenGL REQUIRED)
 find_package(Boost REQUIRED)
 include_directories( ${Boost_INCLUDE_DIRS} )
 
+if(OPENIMAGEIO_PUGIXML_FOUND)
+    set(PUGIXML_INCLUDE_DIR "${OPENIMAGEIO_INCLUDE_DIR/OpenImageIO}")
+    set(PUGIXML_LIBRARIES "")
+  else()
+    find_package(PugiXML REQUIRED)
+  endif()
+
 # Cycles defines
 add_definitions(
     -DCCL_NAMESPACE_BEGIN=namespace\ ccl\ {
